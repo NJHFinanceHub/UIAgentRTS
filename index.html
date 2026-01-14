@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentCraft - RTS Agent Orchestration</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Exocet&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Top Resource Bar -->
+        <div class="resource-bar">
+            <div class="resource-group">
+                <div class="resource gold">
+                    <span class="resource-icon">⚜️</span>
+                    <span class="resource-value" id="gold">2,225,548</span>
+                </div>
+                <div class="resource lumber">
+                    <span class="resource-icon">🌲</span>
+                    <span class="resource-value" id="lumber">62</span>
+                </div>
+                <div class="resource food">
+                    <span class="resource-icon">🍖</span>
+                    <span class="resource-value"><span id="food-used">172</span>/<span id="food-total">200</span></span>
+                </div>
+            </div>
+            <div class="status-indicator online">
+                <span class="status-dot"></span>
+                ONLINE
+            </div>
+        </div>
+
+        <!-- Main Game Area -->
+        <div class="main-game-area">
+            <!-- Left Panel - Quest Log -->
+            <div class="side-panel left-panel">
+                <div class="panel-header">
+                    <span class="panel-icon">📜</span>
+                    <span class="panel-title">MISSIONS</span>
+                </div>
+                <div class="panel-content">
+                    <div class="quest-notification">
+                        <div class="quest-icon">⚔️</div>
+                        <div class="quest-text">NEW QUEST RECEIVED!</div>
+                    </div>
+                    <div class="quest-list">
+                        <div class="quest-item">
+                            <div class="quest-name">The Calling</div>
+                            <div class="quest-desc">Deploy initial reconnaissance agents</div>
+                        </div>
+                        <div class="quest-item">
+                            <div class="quest-name">Gather Intelligence</div>
+                            <div class="quest-desc">Analyze user requirements and constraints</div>
+                        </div>
+                        <div class="quest-item">
+                            <div class="quest-name">Build the Foundation</div>
+                            <div class="quest-desc">Establish core infrastructure</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center - Game View -->
+            <div class="game-view">
+                <canvas id="gameCanvas"></canvas>
+                <div class="terrain-overlay">
+                    <div class="agent-building" style="left: 25%; top: 20%;" data-agent="researcher">
+                        <div class="building-model">🏰</div>
+                        <div class="building-label">Research Agent</div>
+                        <div class="building-status active">ACTIVE</div>
+                    </div>
+                    <div class="agent-building" style="left: 60%; top: 25%;" data-agent="planner">
+                        <div class="building-model">🗼</div>
+                        <div class="building-label">Planning Agent</div>
+                        <div class="building-status active">ACTIVE</div>
+                    </div>
+                    <div class="agent-building" style="left: 40%; top: 50%;" data-agent="executor">
+                        <div class="building-model">⚒️</div>
+                        <div class="building-label">Executor Agent</div>
+                        <div class="building-status idle">IDLE</div>
+                    </div>
+                    <div class="agent-building" style="left: 70%; top: 60%;" data-agent="validator">
+                        <div class="building-model">🛡️</div>
+                        <div class="building-label">Validator Agent</div>
+                        <div class="building-status idle">IDLE</div>
+                    </div>
+                    <div class="agent-building" style="left: 20%; top: 70%;" data-agent="writer">
+                        <div class="building-model">📚</div>
+                        <div class="building-label">Writer Agent</div>
+                        <div class="building-status constructing">TRAINING</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Active Missions -->
+            <div class="side-panel right-panel">
+                <div class="panel-header">
+                    <span class="panel-icon">⚡</span>
+                    <span class="panel-title">ACTIVE MISSIONS</span>
+                </div>
+                <div class="panel-content">
+                    <div class="active-mission">
+                        <div class="mission-header">
+                            <span class="mission-priority high">!</span>
+                            <span class="mission-name">Create Web Experience</span>
+                        </div>
+                        <div class="mission-desc">Design and implement a modern web application with advanced features</div>
+                        <div class="mission-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 65%"></div>
+                            </div>
+                            <span class="progress-text">65%</span>
+                        </div>
+                        <div class="mission-agents">
+                            <span class="agent-chip">🏰 Researcher</span>
+                            <span class="agent-chip">🗼 Planner</span>
+                        </div>
+                    </div>
+                    <div class="active-mission">
+                        <div class="mission-header">
+                            <span class="mission-priority medium">~</span>
+                            <span class="mission-name">Optimize Performance</span>
+                        </div>
+                        <div class="mission-desc">Analyze and improve system efficiency</div>
+                        <div class="mission-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 30%"></div>
+                            </div>
+                            <span class="progress-text">30%</span>
+                        </div>
+                        <div class="mission-agents">
+                            <span class="agent-chip">🛡️ Validator</span>
+                        </div>
+                    </div>
+                    <div class="active-mission">
+                        <div class="mission-header">
+                            <span class="mission-priority low">-</span>
+                            <span class="mission-name">Documentation</span>
+                        </div>
+                        <div class="mission-desc">Generate comprehensive documentation</div>
+                        <div class="mission-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 15%"></div>
+                            </div>
+                            <span class="progress-text">15%</span>
+                        </div>
+                        <div class="mission-agents">
+                            <span class="agent-chip">📚 Writer</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel - Command Panel -->
+        <div class="command-panel">
+            <!-- Left Side - Minimap -->
+            <div class="minimap-container">
+                <div class="minimap-header">TACTICAL MAP</div>
+                <canvas id="minimapCanvas" width="180" height="180"></canvas>
+            </div>
+
+            <!-- Center - Agent Selection Grid -->
+            <div class="agent-grid">
+                <div class="agent-portrait" data-agent="researcher">
+                    <div class="portrait-frame">
+                        <div class="portrait-image">🏰</div>
+                        <div class="portrait-name">Researcher</div>
+                    </div>
+                    <div class="portrait-status active">ACTIVE</div>
+                </div>
+                <div class="agent-portrait" data-agent="planner">
+                    <div class="portrait-frame">
+                        <div class="portrait-image">🗼</div>
+                        <div class="portrait-name">Planner</div>
+                    </div>
+                    <div class="portrait-status active">ACTIVE</div>
+                </div>
+                <div class="agent-portrait" data-agent="executor">
+                    <div class="portrait-frame">
+                        <div class="portrait-image">⚒️</div>
+                        <div class="portrait-name">Executor</div>
+                    </div>
+                    <div class="portrait-status idle">IDLE</div>
+                </div>
+                <div class="agent-portrait" data-agent="validator">
+                    <div class="portrait-frame">
+                        <div class="portrait-image">🛡️</div>
+                        <div class="portrait-name">Validator</div>
+                    </div>
+                    <div class="portrait-status idle">IDLE</div>
+                </div>
+                <div class="agent-portrait" data-agent="writer">
+                    <div class="portrait-frame">
+                        <div class="portrait-image">📚</div>
+                        <div class="portrait-name">Writer</div>
+                    </div>
+                    <div class="portrait-status training">TRAINING</div>
+                </div>
+            </div>
+
+            <!-- Right Side - Command Cards -->
+            <div class="command-cards">
+                <div class="command-card" data-command="deploy">
+                    <div class="card-icon">🚀</div>
+                    <div class="card-name">Deploy</div>
+                    <div class="card-hotkey">D</div>
+                </div>
+                <div class="command-card" data-command="task">
+                    <div class="card-icon">📋</div>
+                    <div class="card-name">Task</div>
+                    <div class="card-hotkey">T</div>
+                </div>
+                <div class="command-card" data-command="stop">
+                    <div class="card-icon">🛑</div>
+                    <div class="card-name">Stop</div>
+                    <div class="card-hotkey">S</div>
+                </div>
+                <div class="command-card" data-command="analyze">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-name">Analyze</div>
+                    <div class="card-hotkey">A</div>
+                </div>
+                <div class="command-card" data-command="upgrade">
+                    <div class="card-icon">⬆️</div>
+                    <div class="card-name">Upgrade</div>
+                    <div class="card-hotkey">U</div>
+                </div>
+                <div class="command-card" data-command="recall">
+                    <div class="card-icon">↩️</div>
+                    <div class="card-name">Recall</div>
+                    <div class="card-hotkey">R</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Info Panel (appears on selection) -->
+        <div class="info-panel" id="infoPanel">
+            <div class="info-header">
+                <span class="info-icon">🏰</span>
+                <span class="info-title">RESEARCH AGENT</span>
+            </div>
+            <div class="info-content">
+                <div class="info-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Status:</span>
+                        <span class="stat-value active">Active</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Tasks:</span>
+                        <span class="stat-value">3/5</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Efficiency:</span>
+                        <span class="stat-value">92%</span>
+                    </div>
+                </div>
+                <div class="info-abilities">
+                    <div class="ability">Deep Research</div>
+                    <div class="ability">Pattern Analysis</div>
+                    <div class="ability">Data Synthesis</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
