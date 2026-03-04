@@ -1,6 +1,28 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { selectedRig, selectedUnit, addNotification } from '../lib/stores';
   import { runCommand } from '../lib/gt-client';
+
+  // Keyboard shortcuts
+  function handleKeydown(e: KeyboardEvent) {
+    // Don't capture when typing in input/textarea
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+    if (e.key === 'Escape') {
+      if ($selectedUnit) { selectedUnit.set(null); return; }
+      if ($selectedRig) { selectedRig.set(null); return; }
+    }
+
+    const key = e.key.toUpperCase();
+    const cmd = commands.find(c => c.hotkey === key);
+    if (cmd) {
+      e.preventDefault();
+      handleClick(cmd);
+    }
+  }
+
+  onMount(() => window.addEventListener('keydown', handleKeydown));
+  onDestroy(() => window.removeEventListener('keydown', handleKeydown));
 
   interface Cmd {
     id: string;
@@ -139,7 +161,7 @@
 </script>
 
 <div class="command-area">
-  <div class="command-label">COMMANDS</div>
+  <div class="command-label">{unit ? (unit.type === 'polecat' ? 'PEON ORDERS' : 'HERO ORDERS') : 'COMMANDS'}</div>
   <div class="command-grid">
     {#each commands as cmd}
       <button
