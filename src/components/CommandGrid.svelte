@@ -1,27 +1,94 @@
 <script lang="ts">
-  import { selectedRig, addNotification } from '../lib/stores';
+  import { selectedRig, selectedUnit, addNotification } from '../lib/stores';
   import { runCommand } from '../lib/gt-client';
 
-  interface Command {
+  interface Cmd {
     id: string;
+    label: string;
     icon: string;
-    name: string;
     hotkey: string;
-    action: () => void;
     needsRig: boolean;
+    color: string;
+    action: () => void;
   }
 
-  const commands: Command[] = [
+  $: unit = $selectedUnit;
+
+  // Unit-specific commands
+  $: unitCommands = unit ? getUnitCommands(unit) : [];
+
+  function getUnitCommands(u: typeof unit): Cmd[] {
+    if (!u) return [];
+    if (u.type === 'polecat') {
+      return [
+        {
+          id: 'nudge-unit', label: 'Nudge', icon: '\u{1F4E2}', hotkey: 'N', needsRig: false, color: '#4fc3f7',
+          action: async () => {
+            const res = await runCommand(`nudge ${u.rig}/${u.name} "Check in"`, true);
+            addNotification(res.success ? `Nudged ${u.name}` : (res.error ?? 'Failed'), res.success ? 'success' : 'error');
+          }
+        },
+        {
+          id: 'nuke-unit', label: 'Nuke', icon: '\u{1F4A5}', hotkey: 'K', needsRig: false, color: '#ff4444',
+          action: async () => {
+            const res = await runCommand(`polecat nuke ${u.rig}/${u.name} --force`, true);
+            addNotification(res.success ? `Nuked ${u.name}` : (res.error ?? 'Failed'), res.success ? 'success' : 'error');
+            if (res.success) selectedUnit.set(null);
+          }
+        },
+        {
+          id: 'status-unit', label: 'Status', icon: '\u{1F4CB}', hotkey: 'S', needsRig: false, color: '#4ade80',
+          action: async () => {
+            const res = await runCommand(`polecat status ${u.rig}/${u.name}`, false);
+            addNotification(res.success ? (res.output?.slice(0, 80) ?? 'OK') : (res.error ?? 'Failed'), res.success ? 'info' : 'error');
+          }
+        },
+        {
+          id: 'deselect', label: 'Deselect', icon: '\u{274C}', hotkey: 'Esc', needsRig: false, color: '#6b5644',
+          action: () => selectedUnit.set(null)
+        },
+      ];
+    } else {
+      // Crew commands
+      return [
+        {
+          id: 'nudge-hero', label: 'Nudge', icon: '\u{1F4E2}', hotkey: 'N', needsRig: false, color: '#4fc3f7',
+          action: async () => {
+            const res = await runCommand(`nudge ${u.rig}/${u.name} "Orders from HQ"`, true);
+            addNotification(res.success ? `Nudged ${u.name}` : (res.error ?? 'Failed'), res.success ? 'success' : 'error');
+          }
+        },
+        {
+          id: 'mail-hero', label: 'Mail', icon: '\u{1F4E8}', hotkey: 'M', needsRig: false, color: '#d4af37',
+          action: async () => {
+            addNotification(`Composing mail to ${u.name}...`, 'info');
+          }
+        },
+        {
+          id: 'status-hero', label: 'Status', icon: '\u{1F4CB}', hotkey: 'S', needsRig: false, color: '#4ade80',
+          action: async () => {
+            addNotification(`${u.name}: ${u.status} — ${u.hook_title ?? 'No assignment'}`, 'info');
+          }
+        },
+        {
+          id: 'deselect', label: 'Deselect', icon: '\u{274C}', hotkey: 'Esc', needsRig: false, color: '#6b5644',
+          action: () => selectedUnit.set(null)
+        },
+      ];
+    }
+  }
+
+  const rigCommands: Cmd[] = [
     {
-      id: 'sling', icon: '\u{1F680}', name: 'Deploy', hotkey: 'D',
-      needsRig: true,
-      action: () => {
-        addNotification('Select a quest to sling to this rig', 'info');
+      id: 'deploy', label: 'Deploy', icon: '\u{2694}', hotkey: 'D', needsRig: true, color: '#4ade80',
+      action: async () => {
+        if (!$selectedRig) return;
+        const res = await runCommand(`rig start ${$selectedRig.name}`, true);
+        addNotification(res.success ? `${$selectedRig.name} deployed` : (res.error ?? 'Failed'), res.success ? 'success' : 'error');
       }
     },
     {
-      id: 'start', icon: '\u{26A1}', name: 'Boot', hotkey: 'B',
-      needsRig: true,
+      id: 'boot', label: 'Boot', icon: '\u{1F525}', hotkey: 'B', needsRig: true, color: '#ffa500',
       action: async () => {
         if (!$selectedRig) return;
         const res = await runCommand(`rig start ${$selectedRig.name}`, true);
@@ -29,8 +96,7 @@
       }
     },
     {
-      id: 'stop', icon: '\u{1F6D1}', name: 'Stop', hotkey: 'S',
-      needsRig: true,
+      id: 'stop', label: 'Stop', icon: '\u{1F6D1}', hotkey: 'S', needsRig: true, color: '#ff4444',
       action: async () => {
         if (!$selectedRig) return;
         const res = await runCommand(`rig stop ${$selectedRig.name}`, true);
@@ -38,130 +104,150 @@
       }
     },
     {
-      id: 'park', icon: '\u{1F17F}\uFE0F', name: 'Park', hotkey: 'P',
-      needsRig: true,
+      id: 'park', label: 'Park', icon: '\u{1F3D5}', hotkey: 'P', needsRig: true, color: '#b39c7a',
       action: async () => {
         if (!$selectedRig) return;
-        addNotification(`Park ${$selectedRig.name}?`, 'warning');
+        const res = await runCommand(`rig park ${$selectedRig.name}`, true);
+        addNotification(res.success ? `${$selectedRig.name} parked` : (res.error ?? 'Failed'), res.success ? 'success' : 'error');
       }
     },
     {
-      id: 'nudge', icon: '\u{1F4E2}', name: 'Nudge', hotkey: 'N',
-      needsRig: false,
-      action: () => {
-        addNotification('Nudge: select a target agent', 'info');
+      id: 'nudge', label: 'Nudge', icon: '\u{1F4E2}', hotkey: 'N', needsRig: true, color: '#4fc3f7',
+      action: async () => {
+        if (!$selectedRig) return;
+        addNotification(`Nudge ${$selectedRig.name}`, 'info');
       }
     },
     {
-      id: 'status', icon: '\u{1F50D}', name: 'Refresh', hotkey: 'R',
-      needsRig: false,
+      id: 'refresh', label: 'Refresh', icon: '\u{1F504}', hotkey: 'R', needsRig: false, color: '#d4af37',
       action: () => {
-        // Triggers SSE refresh cascade
-        addNotification('Refreshing status...', 'info');
+        addNotification('Refreshing...', 'info');
         window.dispatchEvent(new CustomEvent('gt-refresh'));
       }
     },
   ];
 
-  function handleClick(cmd: Command) {
+  $: commands = unit ? unitCommands : rigCommands;
+
+  function handleClick(cmd: Cmd) {
     if (cmd.needsRig && !$selectedRig) {
-      addNotification('Select a rig first!', 'warning');
+      addNotification('Select a rig first', 'warning');
       return;
     }
     cmd.action();
   }
-
-  function handleKeyDown(e: KeyboardEvent) {
-    const key = e.key.toUpperCase();
-    const cmd = commands.find(c => c.hotkey === key);
-    if (cmd) handleClick(cmd);
-  }
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
-
-<div class="command-cards">
-  {#each commands as cmd}
-    <button
-      class="command-card"
-      class:disabled={cmd.needsRig && !$selectedRig}
-      on:click={() => handleClick(cmd)}
-    >
-      <div class="card-icon">{cmd.icon}</div>
-      <div class="card-name">{cmd.name}</div>
-      <div class="card-hotkey">{cmd.hotkey}</div>
-    </button>
-  {/each}
+<div class="command-area">
+  <div class="command-label">COMMANDS</div>
+  <div class="command-grid">
+    {#each commands as cmd}
+      <button
+        class="cmd-btn"
+        class:disabled={cmd.needsRig && !$selectedRig}
+        on:click={() => handleClick(cmd)}
+        style="--accent: {cmd.color}"
+      >
+        <div class="cmd-icon">{cmd.icon}</div>
+        <span class="cmd-name">{cmd.label}</span>
+        <span class="cmd-key">{cmd.hotkey}</span>
+      </button>
+    {/each}
+  </div>
 </div>
 
 <style>
-  .command-cards {
+  .command-area {
     width: 280px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 10px;
-    padding: 15px;
-    background: linear-gradient(135deg, #2a1f15 0%, #1a1209 100%);
-    border-left: 2px solid #6b5644;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.7);
-  }
-
-  .command-card {
-    background: linear-gradient(135deg, #3a2f1f 0%, #2a1f15 100%);
-    border: 2px solid #6b5644;
-    border-radius: 6px;
-    padding: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    background: linear-gradient(180deg, #2d2416 0%, #1a1409 100%);
+    border-left: 3px solid #6b5644;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
     gap: 6px;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.6);
+    flex-shrink: 0;
     position: relative;
-    color: #f4e4c1;
-    font-family: 'Cinzel', serif;
   }
 
-  .command-card:hover:not(.disabled) {
-    background: linear-gradient(135deg, #4a3f2f 0%, #3a2f1f 100%);
-    border-color: #d4af37;
-    transform: translateY(-3px);
-    box-shadow: inset 0 0 15px rgba(212,175,55,0.3), 0 6px 12px rgba(0,0,0,0.8);
+  .command-area::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -1px;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, #d4af37 50%, transparent);
+    pointer-events: none;
   }
 
-  .command-card:active:not(.disabled) {
-    transform: translateY(-1px);
-  }
-
-  .command-card.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .card-icon {
-    font-size: 28px;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
-  }
-
-  .card-name {
+  .command-label {
     font-size: 10px;
     font-weight: 700;
     color: #d4af37;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    text-align: center;
+  }
+
+  .command-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    flex: 1;
+  }
+
+  .cmd-btn {
+    background: linear-gradient(180deg, #3d2e1a 0%, #2d2416 100%);
+    border: 2px solid #6b5644;
+    border-radius: 4px;
+    padding: 6px 4px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    transition: all 0.15s;
+    font-family: 'Cinzel', serif;
+    position: relative;
+    box-shadow: inset 0 1px 0 rgba(139,115,85,0.3);
+  }
+
+  .cmd-btn:hover:not(.disabled) {
+    border-color: #d4af37;
+    background: linear-gradient(180deg, #4d3e2a 0%, #3d2e1a 100%);
+    box-shadow: inset 0 1px 0 rgba(212,175,55,0.3), 0 0 10px rgba(212,175,55,0.2);
+  }
+
+  .cmd-btn:active:not(.disabled) {
+    transform: scale(0.95);
+  }
+
+  .cmd-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .cmd-icon {
+    font-size: 18px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+  }
+
+  .cmd-name {
+    font-size: 9px;
+    font-weight: 700;
+    color: #f4e4c1;
+    letter-spacing: 1px;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
   }
 
-  .card-hotkey {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
+  .cmd-key {
     font-size: 8px;
     font-weight: 700;
-    color: #8b7355;
-    background: rgba(0,0,0,0.5);
-    padding: 2px 5px;
-    border-radius: 3px;
+    color: #6b5644;
+    background: rgba(0,0,0,0.4);
+    padding: 1px 6px;
+    border-radius: 2px;
+    border: 1px solid rgba(107,86,68,0.4);
+    font-family: monospace;
   }
 </style>

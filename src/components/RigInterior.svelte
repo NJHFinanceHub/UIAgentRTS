@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { selectedRig, rigBeads } from '../lib/stores';
+  import { selectedRig, rigBeads, selectedUnit } from '../lib/stores';
+  import type { SelectedUnit } from '../lib/stores';
   import { getRigBeads } from '../lib/gt-client';
   import type { RigBead } from '../lib/gt-client';
 
@@ -26,7 +27,36 @@
   function goBack() {
     selectedRig.set(null);
     rigBeads.set([]);
+    selectedUnit.set(null);
   }
+
+  function selectPolecat(polecat: { name: string; status: string; hook?: string; rig: string }) {
+    selectedUnit.update(cur =>
+      cur?.name === polecat.name && cur?.type === 'polecat' ? null : {
+        type: 'polecat',
+        name: polecat.name,
+        status: polecat.status,
+        hook: polecat.hook,
+        rig: polecat.rig,
+      }
+    );
+  }
+
+  function selectCrew(crew: { name: string; state: string; hook?: string; hook_title?: string; last_active: string; rig: string }) {
+    selectedUnit.update(cur =>
+      cur?.name === crew.name && cur?.type === 'crew' ? null : {
+        type: 'crew',
+        name: crew.name,
+        status: crew.state,
+        hook: crew.hook,
+        hook_title: crew.hook_title,
+        last_active: crew.last_active,
+        rig: crew.rig,
+      }
+    );
+  }
+
+  $: currentUnit = $selectedUnit;
 
   function relativeTime(iso: string): string {
     if (!iso) return '';
@@ -107,7 +137,9 @@
 </script>
 
 {#if rig}
-  <div class="interior">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="interior" on:click|stopPropagation>
     <canvas bind:this={canvas}></canvas>
     <div class="interior-content">
       <!-- Header -->
@@ -157,7 +189,8 @@
             <div class="peon-grid">
               {#each rig.polecats as polecat}
                 {@const busy = polecat.status === 'busy' || polecat.status === 'running'}
-                <div class="peon-card" class:busy>
+                {@const selected = currentUnit?.type === 'polecat' && currentUnit?.name === polecat.name}
+                <div class="peon-card" class:busy class:selected on:click|stopPropagation={() => selectPolecat(polecat)}>
                   <div class="peon-icon">{busy ? '\u{1F528}' : '\u{1F6CC}'}</div>
                   <div class="peon-name">{polecat.name}</div>
                   <div class="peon-status" class:busy>{busy ? 'BUSY' : 'IDLE'}</div>
@@ -188,7 +221,8 @@
             <div class="hero-grid">
               {#each rig.crews as crew}
                 {@const isThrall = crew.name.toLowerCase() === 'thrall'}
-                <div class="hero-card" class:thrall={isThrall}>
+                {@const heroSelected = currentUnit?.type === 'crew' && currentUnit?.name === crew.name}
+                <div class="hero-card" class:thrall={isThrall} class:selected={heroSelected} on:click|stopPropagation={() => selectCrew(crew)}>
                   <div class="hero-portrait" class:thrall={isThrall}>
                     {#if isThrall}
                       <img src="/portraits/thrall-dismounted.png" alt="Thrall" class="thrall-portrait" />
@@ -446,6 +480,15 @@
     transition: all 0.2s;
   }
 
+  .peon-card {
+    cursor: pointer;
+  }
+
+  .peon-card.selected {
+    border-color: #d4af37 !important;
+    box-shadow: 0 0 16px rgba(212,175,55,0.4), 0 4px 12px rgba(0,0,0,0.4) !important;
+  }
+
   .peon-card.busy {
     border-color: rgba(74,222,128,0.5);
     box-shadow: 0 0 12px rgba(74,222,128,0.15), 0 4px 12px rgba(0,0,0,0.4);
@@ -552,6 +595,17 @@
 
   .hero-info {
     min-width: 0;
+  }
+
+  .hero-card {
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .hero-card.selected {
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 20px rgba(255,215,0,0.35), 0 4px 12px rgba(0,0,0,0.4) !important;
+    transform: scale(1.02);
   }
 
   .hero-card.thrall {

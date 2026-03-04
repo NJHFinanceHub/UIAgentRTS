@@ -9,6 +9,32 @@ export const selectedRig = writable<Rig | null>(null);
 export const rigBeads = writable<RigBead[]>([]);
 export const connected = writable(false);
 
+// Selected unit inside a rig interior (peon or hero)
+export interface SelectedUnit {
+  type: 'polecat' | 'crew';
+  name: string;
+  status: string;
+  hook?: string;
+  hook_title?: string;
+  last_active?: string;
+  rig: string;
+}
+export const selectedUnit = writable<SelectedUnit | null>(null);
+
+// Chat messages
+export interface ChatMessage {
+  id: number;
+  from: 'user' | 'system' | 'mayor';
+  text: string;
+  timestamp: number;
+}
+let chatMsgId = 0;
+export const chatMessages = writable<ChatMessage[]>([]);
+export function addChatMessage(from: ChatMessage['from'], text: string) {
+  const id = ++chatMsgId;
+  chatMessages.update(msgs => [...msgs, { id, from, text, timestamp: Date.now() }]);
+}
+
 // Notification system
 export interface Notification {
   id: number;

@@ -43,6 +43,7 @@
   import CommandGrid from './components/CommandGrid.svelte';
   import Minimap from './components/Minimap.svelte';
   import AgentPortrait from './components/AgentPortrait.svelte';
+  import ChatPanel from './components/ChatPanel.svelte';
   import InfoPanel from './components/InfoPanel.svelte';
   import Notification from './components/Notification.svelte';
 
@@ -101,6 +102,7 @@
   <div class="command-panel">
     <Minimap />
     <AgentPortrait />
+    <ChatPanel />
     <CommandGrid />
   </div>
 
