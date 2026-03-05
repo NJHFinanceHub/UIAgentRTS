@@ -56,7 +56,12 @@
     };
     window.addEventListener('resize', onResize);
     onResize();
-    return () => window.removeEventListener('resize', onResize);
+    initTerrainPeons();
+    peonInterval = setInterval(animateTerrainPeons, 150);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (peonInterval) clearInterval(peonInterval);
+    };
   });
 
   function drawTerrain() {
@@ -113,6 +118,118 @@
     ctx.fillStyle = warm;
     ctx.fillRect(0, 0, w, h);
   }
+
+  // ---- Terrain Peon Animation System ----
+  // Small animated sprites near buildings on the terrain map.
+  // Busy peons swing a hammer (bounce), idle peons wander randomly.
+
+  interface TerrainPeon {
+    id: string;
+    name: string;
+    rigIndex: number;    // which rig/building this peon belongs to
+    x: number;           // current position (% of terrain)
+    y: number;
+    targetX: number;
+    targetY: number;
+    speed: number;
+    busy: boolean;
+    paused: boolean;
+    pauseUntil: number;
+  }
+
+  let terrainPeons: TerrainPeon[] = [];
+  let peonInterval: ReturnType<typeof setInterval>;
+
+  function initTerrainPeons() {
+    const anims: TerrainPeon[] = [];
+    const pos = positions;
+
+    $rigs.forEach((rig, rigIdx) => {
+      if (rigIdx >= pos.length) return;
+      const bx = pos[rigIdx].x;
+      const by = pos[rigIdx].y;
+      const count = rig.polecat_count || 0;
+
+      // Use actual polecat data if available, otherwise generate from count
+      const pList = rig.polecats && rig.polecats.length > 0
+        ? rig.polecats
+        : Array.from({ length: count }, (_, i) => ({
+            name: `peon-${i + 1}`, status: 'idle', rig: rig.name, hook: undefined
+          }));
+
+      pList.forEach((p, i) => {
+        const busy = p.status === 'busy' || p.status === 'running';
+        const globalIdx = anims.length;
+        // Scatter peons around the building position (offset below/around building)
+        const jx = seededRandom(globalIdx * 17 + 1) * 8 - 4;
+        const jy = seededRandom(globalIdx * 17 + 2) * 6 + 3; // slightly below building
+        const tx = bx + seededRandom(globalIdx * 17 + 3) * 8 - 4;
+        const ty = by + seededRandom(globalIdx * 17 + 4) * 6 + 3;
+
+        anims.push({
+          id: `tp-${rigIdx}-${i}`,
+          name: p.name,
+          rigIndex: rigIdx,
+          x: bx + jx,
+          y: by + jy,
+          targetX: tx,
+          targetY: ty,
+          speed: 0.02 + seededRandom(globalIdx * 17 + 5) * 0.015,
+          busy,
+          paused: false,
+          pauseUntil: 0,
+        });
+      });
+    });
+
+    terrainPeons = anims;
+  }
+
+  function animateTerrainPeons() {
+    if (terrainPeons.length === 0) return;
+    const now = performance.now();
+    const pos = positions;
+
+    for (const p of terrainPeons) {
+      if (p.rigIndex >= pos.length) continue;
+      const bx = pos[p.rigIndex].x;
+      const by = pos[p.rigIndex].y;
+
+      if (p.paused) {
+        if (now < p.pauseUntil) continue;
+        p.paused = false;
+        // Pick new wander target near building
+        p.targetX = bx + (Math.random() - 0.5) * 10;
+        p.targetY = by + Math.random() * 6 + 2;
+        continue;
+      }
+
+      const dx = p.targetX - p.x;
+      const dy = p.targetY - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 0.8) {
+        p.paused = true;
+        p.pauseUntil = now + (p.busy ? 600 + Math.random() * 800 : 1200 + Math.random() * 2000);
+      } else {
+        const step = p.speed * 150;
+        p.x += (dx / dist) * Math.min(step, dist);
+        p.y += (dy / dist) * Math.min(step, dist);
+      }
+    }
+
+    terrainPeons = terrainPeons;
+  }
+
+  // Re-init peons when rig data changes
+  let lastPeonKey = '';
+  $: {
+    const key = $rigs.map(r => `${r.name}:${r.polecat_count}:${(r.polecats || []).map(p => p.status).join('/')}`).join(',');
+    if (key !== lastPeonKey) {
+      lastPeonKey = key;
+      initTerrainPeons();
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -129,6 +246,17 @@
         selected={$selectedRig?.name === rig.name}
         on:select={() => selectRig(rig)}
       />
+    {/each}
+    <!-- Terrain Peon Sprites -->
+    {#each terrainPeons as peon (peon.id)}
+      <div
+        class="terrain-peon"
+        class:busy={peon.busy}
+        style="left: {peon.x}%; top: {peon.y}%"
+      >
+        <span class="tp-emoji">{peon.busy ? '⛏️' : '🚶'}</span>
+        <span class="tp-name">{peon.name}</span>
+      </div>
     {/each}
   </div>
   {#if $rigs.length === 0}
@@ -196,5 +324,42 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  /* ---- Terrain Peon Sprites ---- */
+  .terrain-peon {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    pointer-events: none;
+    transition: left 150ms linear, top 150ms linear;
+    text-align: center;
+  }
+
+  .tp-emoji {
+    font-size: 14px;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+    display: block;
+  }
+
+  .terrain-peon.busy .tp-emoji {
+    animation: tp-bounce 0.8s ease-in-out infinite;
+  }
+
+  @keyframes tp-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  .tp-name {
+    display: block;
+    font-size: 6px;
+    font-weight: 700;
+    color: #f4e4c1;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.3px;
+    opacity: 0.8;
   }
 </style>
