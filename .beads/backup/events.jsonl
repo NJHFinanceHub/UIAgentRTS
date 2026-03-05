@@ -1,1 +1,27 @@
 {"actor":"mayor","comment":null,"created_at":"2026-03-04T12:40:00Z","event_type":"created","id":1,"issue_id":"ui-193","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:21Z","event_type":"created","id":2,"issue_id":"ui-19k","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:24Z","event_type":"created","id":3,"issue_id":"ui-d2e","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:26Z","event_type":"created","id":4,"issue_id":"ui-j8h","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:28Z","event_type":"created","id":5,"issue_id":"ui-94f","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:30Z","event_type":"created","id":6,"issue_id":"ui-pse","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:32Z","event_type":"created","id":7,"issue_id":"ui-k2s","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:34Z","event_type":"created","id":8,"issue_id":"ui-1vn","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:37Z","event_type":"created","id":9,"issue_id":"ui-nfl","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:39Z","event_type":"created","id":10,"issue_id":"ui-dsw","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:02:42Z","event_type":"created","id":11,"issue_id":"ui-mwp","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:00Z","event_type":"created","id":12,"issue_id":"ui-0wy","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:02Z","event_type":"created","id":13,"issue_id":"ui-ct2","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:05Z","event_type":"created","id":14,"issue_id":"ui-3lz","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:07Z","event_type":"created","id":15,"issue_id":"ui-ebr","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:10Z","event_type":"created","id":16,"issue_id":"ui-q7z","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:11Z","event_type":"created","id":17,"issue_id":"ui-3ao","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:14Z","event_type":"created","id":18,"issue_id":"ui-jj4","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:10:16Z","event_type":"created","id":19,"issue_id":"ui-i4h","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:17:49Z","event_type":"closed","id":20,"issue_id":"ui-0wy","new_value":"Chat panel implemented with gt/bd command support, /help, /clear, and plain text messaging to Mayor","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:17:50Z","event_type":"closed","id":21,"issue_id":"ui-3ao","new_value":"Minimap click-to-navigate implemented with selection ring highlight","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:17:50Z","event_type":"closed","id":22,"issue_id":"ui-q7z","new_value":"Hero/peon ability cards implemented in command grid with context-aware commands","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:18:02Z","event_type":"created","id":23,"issue_id":"ui-44e","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:18:05Z","event_type":"created","id":24,"issue_id":"ui-z45","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:18:07Z","event_type":"created","id":25,"issue_id":"ui-vu0","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:18:10Z","event_type":"created","id":26,"issue_id":"ui-da7","new_value":"","old_value":""}
+{"actor":"mayor","comment":null,"created_at":"2026-03-04T16:18:12Z","event_type":"created","id":27,"issue_id":"ui-gbn","new_value":"","old_value":""}

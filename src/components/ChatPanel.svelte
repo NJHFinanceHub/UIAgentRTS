@@ -1,6 +1,6 @@
 <script lang="ts">
   import { chatMessages, addChatMessage, addNotification } from '../lib/stores';
-  import { runCommand } from '../lib/gt-client';
+  import { runCommand, sendMail } from '../lib/gt-client';
   import { tick } from 'svelte';
 
   let input = '';
@@ -68,10 +68,10 @@
         addChatMessage('system', `Unknown command: /${cmd}. Try /help`);
       }
     } else {
-      // Regular chat message — send as mail to mayor
+      // Regular chat message — send as mail via JSON endpoint
       addChatMessage('system', 'Sending to Mayor...');
       try {
-        const res = await runCommand(`mail send mayor/ -s "Chat" -m "${text.replace(/"/g, '\\"')}"`, true);
+        const res = await sendMail('mayor/', 'Chat', text);
         if (res.success) {
           addChatMessage('mayor', 'Message received. I\'ll look into it.');
         } else {

@@ -1,42 +1,40 @@
 <script lang="ts">
   import { readyItems } from '../lib/stores';
-  import type { ReadyItem } from '../lib/gt-client';
 
   function priorityColor(p: number): string {
-    if (p <= 1) return '#ff0000';
+    if (p <= 1) return '#ff4444';
     if (p === 2) return '#ffa500';
     if (p === 3) return '#4ade80';
-    return '#666';
-  }
-
-  function priorityLabel(p: number): string {
-    if (p <= 1) return '!';
-    if (p === 2) return '~';
-    return '-';
+    return '#6b5644';
   }
 </script>
 
-<div class="side-panel">
+<div class="panel">
   <div class="panel-header">
-    <span class="panel-icon">&#x1F4DC;</span>
-    <span class="panel-title">QUESTS</span>
-    <span class="quest-count">{$readyItems.length}</span>
+    <span class="panel-title">&#128220; QUESTS</span>
+    <span class="count">{$readyItems.length}</span>
   </div>
-  <div class="panel-content">
+
+  {#if $readyItems.length > 3}
+    <div class="quest-alert">
+      <span class="alert-icon">&#9888;</span>
+      <span>{$readyItems.length} quests awaiting</span>
+    </div>
+  {/if}
+
+  <div class="panel-body">
     {#if $readyItems.length === 0}
-      <div class="empty-state">No quests available</div>
+      <div class="empty">No quests available</div>
     {:else}
       {#each $readyItems as item}
         <div class="quest-item">
-          <div class="quest-header">
-            <span class="quest-priority" style="background: {priorityColor(item.priority)}">
-              {priorityLabel(item.priority)}
-            </span>
-            <span class="quest-name">{item.title}</span>
-          </div>
-          <div class="quest-meta">
-            <span class="quest-source">{item.source}</span>
-            <span class="quest-id">{item.id}</span>
+          <div class="priority-circle" style="background: {priorityColor(item.priority)}; box-shadow: 0 0 6px {priorityColor(item.priority)}"></div>
+          <div class="quest-info">
+            <div class="quest-title">{item.title}</div>
+            <div class="quest-meta">
+              <span class="quest-source">{item.source}</span>
+              <span class="quest-id">{item.id}</span>
+            </div>
           </div>
         </div>
       {/each}
@@ -45,112 +43,148 @@
 </div>
 
 <style>
-  .side-panel {
+  .panel {
     width: 280px;
-    background: linear-gradient(180deg, #2a1f15 0%, #1a1209 100%);
-    border: 3px solid #6b5644;
-    border-top: none;
-    box-shadow: inset 0 0 30px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.8);
+    background: linear-gradient(180deg, #2d2416 0%, #1a1409 100%);
+    border-right: 3px solid #6b5644;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
     position: relative;
   }
 
+  .panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -1px;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, #d4af37 50%, transparent);
+    pointer-events: none;
+  }
+
   .panel-header {
-    background: linear-gradient(180deg, #4a3a26 0%, #2d2416 100%);
-    border-bottom: 2px solid #8b7355;
-    padding: 12px 15px;
+    padding: 14px 16px;
+    border-bottom: 2px solid #6b5644;
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #3d2e1a 0%, #2d2416 100%);
+  }
+
+  .panel-title {
+    font-size: 13px;
     font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 2px;
     color: #d4af37;
+    letter-spacing: 3px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
   }
 
-  .panel-icon { font-size: 18px; }
-
-  .quest-count {
-    margin-left: auto;
-    background: rgba(0,0,0,0.5);
-    padding: 2px 8px;
+  .count {
+    font-size: 13px;
+    font-weight: 700;
+    color: #d4af37;
+    background: rgba(212,175,55,0.15);
+    padding: 2px 10px;
     border-radius: 10px;
+    border: 1px solid rgba(212,175,55,0.3);
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+  }
+
+  .quest-alert {
+    background: linear-gradient(90deg, #8b2020, #6b1515);
+    border-bottom: 1px solid #d4af37;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 11px;
+    font-weight: 600;
     color: #ffd700;
+    letter-spacing: 1px;
+    animation: alert-glow 2s ease-in-out infinite;
   }
 
-  .panel-content {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
-  }
-
-  .panel-content::-webkit-scrollbar { width: 8px; }
-  .panel-content::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
-  .panel-content::-webkit-scrollbar-thumb { background: #6b5644; border-radius: 4px; }
-
-  .empty-state {
-    color: #666;
-    text-align: center;
-    padding: 20px;
+  .alert-icon {
     font-size: 12px;
+  }
+
+  @keyframes alert-glow {
+    0%, 100% { box-shadow: inset 0 0 10px rgba(139, 32, 32, 0.5); }
+    50% { box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.2); }
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: #6b5644; border-radius: 2px; }
+
+  .empty {
+    color: #6b5644;
+    text-align: center;
+    padding: 32px 16px;
+    font-size: 12px;
+    font-style: italic;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
   }
 
   .quest-item {
-    background: rgba(0,0,0,0.4);
-    border: 1px solid #6b5644;
-    border-left: 3px solid #d4af37;
-    padding: 10px;
-    margin-bottom: 8px;
-    transition: all 0.3s ease;
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 4px;
     cursor: pointer;
+    transition: all 0.2s;
+    align-items: flex-start;
+    background: rgba(13, 10, 5, 0.4);
+    border-left: 3px solid transparent;
+    margin-bottom: 4px;
   }
 
   .quest-item:hover {
-    background: rgba(212, 175, 55, 0.1);
-    border-left-color: #ffd700;
-    transform: translateX(3px);
+    background: rgba(45, 36, 22, 0.6);
+    border-left-color: #d4af37;
+    transform: translateX(4px);
   }
 
-  .quest-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-
-  .quest-priority {
-    width: 20px;
-    height: 20px;
+  .priority-circle {
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 12px;
-    color: #fff;
+    margin-top: 4px;
     flex-shrink: 0;
   }
 
-  .quest-name {
-    font-weight: 700;
+  .quest-info {
+    min-width: 0;
+  }
+
+  .quest-title {
     font-size: 12px;
-    color: #d4af37;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    color: #f4e4c1;
+    line-height: 1.4;
+    margin-bottom: 4px;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
   }
 
   .quest-meta {
     display: flex;
-    justify-content: space-between;
+    gap: 8px;
     font-size: 10px;
-    color: #8b7355;
   }
 
   .quest-source { color: #b39c7a; }
-  .quest-id { color: #666; font-family: monospace; }
+  .quest-id { color: #6b5644; font-family: monospace; }
 </style>

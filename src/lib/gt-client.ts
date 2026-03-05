@@ -227,6 +227,20 @@ export async function getRigBeads(rig: string): Promise<RigBead[]> {
   }
 }
 
+// Send mail via JSON endpoint (not shell command)
+export async function sendMail(to: string, subject: string, body: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/mail/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, body }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 // Connect to SSE event stream
 export function connectSSE(onUpdate: () => void, onError?: (err: Event) => void): EventSource {
   const es = new EventSource(`${API_BASE}/events`);

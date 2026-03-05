@@ -113,7 +113,7 @@
       id: 'boot', label: 'Boot', icon: '\u{1F525}', hotkey: 'B', needsRig: true, color: '#ffa500',
       action: async () => {
         if (!$selectedRig) return;
-        const res = await runCommand(`rig start ${$selectedRig.name}`, true);
+        const res = await runCommand(`rig restart ${$selectedRig.name}`, true);
         addNotification(res.success ? `${$selectedRig.name} booted` : (res.error ?? 'Failed'), res.success ? 'success' : 'error');
       }
     },
