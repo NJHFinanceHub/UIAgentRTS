@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { selectedRig, rigBeads, selectedUnit, addNotification, addChatMessage } from '../lib/stores';
   import type { SelectedUnit } from '../lib/stores';
   import { getRigBeads, runCommand } from '../lib/gt-client';
@@ -325,26 +325,38 @@
   }
 
   // ---- Lifecycle ----
-  onMount(() => {
-    if (!canvas) return;
+  // Canvas setup — runs when canvas element appears (rig selected)
+  let canvasReady = false;
+  let resizeHandler: (() => void) | null = null;
+
+  $: if (canvas && rig && !canvasReady) {
+    canvasReady = true;
     const onResize = () => {
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
       drawInteriorTerrain();
     };
+    resizeHandler = onResize;
     window.addEventListener('resize', onResize);
     onResize();
     initPeons();
-    // 150ms tick — CSS transitions smooth the visual movement
+    if (animInterval) clearInterval(animInterval);
     animInterval = setInterval(animatePeons, 150);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      clearInterval(animInterval);
-    };
-  });
+  }
+
+  // Reset when rig is deselected
+  $: if (!rig && canvasReady) {
+    canvasReady = false;
+    if (animInterval) clearInterval(animInterval);
+    if (resizeHandler) {
+      window.removeEventListener('resize', resizeHandler);
+      resizeHandler = null;
+    }
+  }
 
   onDestroy(() => {
     if (animInterval) clearInterval(animInterval);
+    if (resizeHandler) window.removeEventListener('resize', resizeHandler);
   });
 
   // Only re-init peons when polecat data actually changes
