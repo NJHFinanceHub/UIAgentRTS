@@ -2,6 +2,7 @@ import express from 'express';
 import { createConnection } from 'mysql2/promise';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execFile } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -60,39 +61,59 @@ app.use((req, res, next) => {
   next();
 });
 
-// Proxy POST /api/run → gt dashboard with CSRF token injection
+// Run gt commands directly (no dashboard dependency)
 app.post('/api/run', async (req, res) => {
+  const { command, confirmed } = req.body;
+  if (!command) {
+    return res.status(400).json({ success: false, error: 'Missing command' });
+  }
+  const start = Date.now();
   try {
-    const token = await fetchCsrfToken();
-    const upstream = await timedFetch(`${GT_DASHBOARD}/api/run`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Dashboard-Token': token,
-      },
-      body: JSON.stringify(req.body),
-    }, 10000);
-    const data = await upstream.json();
-    res.json(data);
+    const output = await new Promise<string>((resolve, reject) => {
+      // Split command into args — command comes without 'gt ' prefix
+      const args = command.split(/\s+/);
+      execFile('gt', args, {
+        cwd: '/home/njh/gt',
+        timeout: 15000,
+        maxBuffer: 1024 * 1024,
+      }, (err, stdout, stderr) => {
+        if (err) reject(new Error(stderr || err.message));
+        else resolve(stdout);
+      });
+    });
+    res.json({
+      success: true,
+      output,
+      duration_ms: Date.now() - start,
+      command,
+    });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.json({
+      success: false,
+      error: err.message,
+      duration_ms: Date.now() - start,
+      command,
+    });
   }
 });
 
-// Proxy POST /api/mail/send → gt dashboard with CSRF token
+// Mail send — shell out to gt directly (no dashboard dependency)
 app.post('/api/mail/send', async (req, res) => {
+  const { to, subject, body } = req.body;
+  if (!to || !subject || !body) {
+    return res.status(400).json({ success: false, error: 'Missing to, subject, or body' });
+  }
   try {
-    const token = await fetchCsrfToken();
-    const upstream = await timedFetch(`${GT_DASHBOARD}/api/mail/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Dashboard-Token': token,
-      },
-      body: JSON.stringify(req.body),
+    await new Promise<void>((resolve, reject) => {
+      execFile('gt', ['mail', 'send', to, '-s', subject, '-m', body], {
+        cwd: '/home/njh/gt',
+        timeout: 10000,
+      }, (err, stdout, stderr) => {
+        if (err) reject(new Error(stderr || err.message));
+        else resolve();
+      });
     });
-    const data = await upstream.json();
-    res.json(data);
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
