@@ -28,28 +28,42 @@
     lastRefreshAgo = secs < 2 ? 'just now' : `${secs}s ago`;
   }
 
+  let refreshing = false;
+
   async function refresh() {
+    if (refreshing) return; // prevent stacking
+    refreshing = true;
     try {
-      const status = await getStatus();
-      townStatus.set(status);
-      connected.set(true);
-      lastRefreshTime = Date.now();
-      refreshFlash = 'success';
-      setTimeout(() => { refreshFlash = ''; }, 600);
-    } catch (err: any) {
-      console.error('[refresh] Status failed:', err);
-      connected.set(false);
-      refreshFlash = 'error';
-      setTimeout(() => { refreshFlash = ''; }, 600);
+      // Run all fetches in parallel — don't let one block the others
+      const [statusResult, mailResult, readyResult] = await Promise.allSettled([
+        getStatus(),
+        getMailInbox(),
+        getReady(),
+      ]);
+
+      if (statusResult.status === 'fulfilled') {
+        townStatus.set(statusResult.value);
+        connected.set(true);
+        lastRefreshTime = Date.now();
+        refreshFlash = 'success';
+        setTimeout(() => { refreshFlash = ''; }, 600);
+      } else {
+        console.error('[refresh] Status failed:', statusResult.reason);
+        connected.set(false);
+        refreshFlash = 'error';
+        setTimeout(() => { refreshFlash = ''; }, 600);
+      }
+
+      if (mailResult.status === 'fulfilled') {
+        mailInbox.set(mailResult.value);
+      }
+
+      if (readyResult.status === 'fulfilled') {
+        readyItems.set(readyResult.value.items ?? []);
+      }
+    } finally {
+      refreshing = false;
     }
-    try {
-      const mail = await getMailInbox();
-      mailInbox.set(mail);
-    } catch {}
-    try {
-      const ready = await getReady();
-      readyItems.set(ready.items ?? []);
-    } catch {}
   }
 
   function handleRefresh() {
@@ -73,7 +87,7 @@
       () => refresh(),
       () => connected.set(false)
     );
-    refreshTimer = setInterval(refresh, 5000);
+    refreshTimer = setInterval(refresh, 30000);
     agoTimer = setInterval(updateRefreshAgo, 1000);
     window.addEventListener('gt-refresh', handleRefresh);
     window.addEventListener('keydown', handleKeydown);

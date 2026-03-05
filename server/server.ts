@@ -7,48 +7,20 @@ import { execFile } from 'child_process';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = 3001;
-const GT_DASHBOARD = 'http://localhost:8080';
 
-let csrfToken: string | null = null;
-
-// Upstream fetch with timeout (prevents hanging when dashboard is down)
-function timedFetch(url: string, opts: RequestInit = {}, timeoutMs = 5000): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
+// Helper: run a gt command and return stdout
+function runGt(args: string[], timeoutMs = 25000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile('gt', args, {
+      cwd: '/home/njh/gt',
+      timeout: timeoutMs,
+      maxBuffer: 1024 * 1024,
+    }, (err, stdout, stderr) => {
+      if (err) reject(new Error(stderr || err.message));
+      else resolve(stdout);
+    });
+  });
 }
-
-// Fetch CSRF token from gt dashboard HTML
-async function fetchCsrfToken(): Promise<string> {
-  if (csrfToken) return csrfToken;
-  try {
-    const res = await timedFetch(GT_DASHBOARD, {}, 3000);
-    const html = await res.text();
-    // <meta name="dashboard-token" content="...">
-    const match = html.match(/name="dashboard-token"\s+content="([^"]+)"/);
-    if (match) {
-      csrfToken = match[1];
-      console.log(`[csrf] Token acquired: ${csrfToken.slice(0, 8)}...`);
-      return csrfToken;
-    }
-    // Fallback patterns
-    const altMatch = html.match(/data-csrf-token="([^"]+)"/);
-    if (altMatch) {
-      csrfToken = altMatch[1];
-      return csrfToken;
-    }
-    throw new Error('CSRF token not found in dashboard HTML');
-  } catch (err) {
-    console.error('[csrf] Failed to fetch token:', err);
-    throw err;
-  }
-}
-
-// Refresh token periodically (every 10 minutes)
-setInterval(() => {
-  csrfToken = null;
-  fetchCsrfToken().catch(() => {});
-}, 10 * 60 * 1000);
 
 app.use(express.json());
 
@@ -61,121 +33,64 @@ app.use((req, res, next) => {
   next();
 });
 
-// Run gt commands directly (no dashboard dependency)
+// Run gt commands directly
 app.post('/api/run', async (req, res) => {
-  const { command, confirmed } = req.body;
+  const { command } = req.body;
   if (!command) {
     return res.status(400).json({ success: false, error: 'Missing command' });
   }
   const start = Date.now();
   try {
-    const output = await new Promise<string>((resolve, reject) => {
-      // Split command into args — command comes without 'gt ' prefix
-      const args = command.split(/\s+/);
-      execFile('gt', args, {
-        cwd: '/home/njh/gt',
-        timeout: 15000,
-        maxBuffer: 1024 * 1024,
-      }, (err, stdout, stderr) => {
-        if (err) reject(new Error(stderr || err.message));
-        else resolve(stdout);
-      });
-    });
-    res.json({
-      success: true,
-      output,
-      duration_ms: Date.now() - start,
-      command,
-    });
+    const args = command.split(/\s+/);
+    const output = await runGt(args);
+    res.json({ success: true, output, duration_ms: Date.now() - start, command });
   } catch (err: any) {
-    res.json({
-      success: false,
-      error: err.message,
-      duration_ms: Date.now() - start,
-      command,
-    });
+    res.json({ success: false, error: err.message, duration_ms: Date.now() - start, command });
   }
 });
 
-// Mail send — shell out to gt directly (no dashboard dependency)
+// Mail send — direct gt command
 app.post('/api/mail/send', async (req, res) => {
   const { to, subject, body } = req.body;
   if (!to || !subject || !body) {
     return res.status(400).json({ success: false, error: 'Missing to, subject, or body' });
   }
   try {
-    await new Promise<void>((resolve, reject) => {
-      execFile('gt', ['mail', 'send', to, '-s', subject, '-m', body], {
-        cwd: '/home/njh/gt',
-        timeout: 10000,
-      }, (err, stdout, stderr) => {
-        if (err) reject(new Error(stderr || err.message));
-        else resolve();
-      });
-    });
+    await runGt(['mail', 'send', to, '-s', subject, '-m', body], 10000);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Proxy POST /api/issues/* → gt dashboard with CSRF token
-app.post('/api/issues/:action', async (req, res) => {
+// Mail inbox — direct gt command
+app.get('/api/mail/inbox', async (_req, res) => {
   try {
-    const token = await fetchCsrfToken();
-    const upstream = await timedFetch(`${GT_DASHBOARD}/api/issues/${req.params.action}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Dashboard-Token': token,
-      },
-      body: JSON.stringify(req.body),
-    });
-    const data = await upstream.json();
-    res.json(data);
+    const output = await runGt(['mail', 'inbox', '--json'], 8000);
+    try {
+      const data = JSON.parse(output);
+      res.json(data);
+    } catch {
+      // Non-JSON output — return as messages array
+      res.json({ messages: [], unread_count: 0, total: 0 });
+    }
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    res.json({ messages: [], unread_count: 0, total: 0 });
   }
 });
 
-// SSE proxy: pass through /api/events from gt dashboard
-app.get('/api/events', async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
+// Ready work items — direct gt command
+app.get('/api/ready', async (_req, res) => {
   try {
-    const upstream = await timedFetch(`${GT_DASHBOARD}/api/events`, {}, 5000);
-    if (!upstream.body) {
-      res.write('event: error\ndata: no upstream body\n\n');
-      return res.end();
+    const output = await runGt(['bd', 'ready', '--json'], 8000);
+    try {
+      const data = JSON.parse(output);
+      res.json(data);
+    } catch {
+      res.json({ items: [], by_source: {}, summary: { total: 0, p1_count: 0, p2_count: 0, p3_count: 0 } });
     }
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-
-    const pump = async () => {
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          res.write(chunk);
-        }
-      } catch {
-        // upstream closed
-      }
-      res.end();
-    };
-    pump();
-
-    req.on('close', () => {
-      reader.cancel().catch(() => {});
-    });
-  } catch (err: any) {
-    res.write(`event: error\ndata: ${err.message}\n\n`);
-    res.end();
+  } catch {
+    res.json({ items: [], by_source: {}, summary: { total: 0, p1_count: 0, p2_count: 0, p3_count: 0 } });
   }
 });
 
@@ -198,10 +113,10 @@ app.get('/api/beads/:rig', async (req, res) => {
     await conn.end();
     res.json({ items: rows, rig: req.params.rig });
   } catch (err: any) {
-    // Fallback: use bd ready via gt dashboard, map to RigBead[] shape
+    // Fallback: use bd ready directly
     try {
-      const upstream = await timedFetch(`${GT_DASHBOARD}/api/ready`);
-      const data = await upstream.json();
+      const output = await runGt(['bd', 'ready', '--json'], 8000);
+      const data = JSON.parse(output);
       const items = (data.items ?? []).map((item: any) => ({
         id: item.id,
         title: item.title,
@@ -212,27 +127,29 @@ app.get('/api/beads/:rig', async (req, res) => {
       }));
       res.json({ items, rig: req.params.rig });
     } catch {
-      res.status(500).json({ error: err.message });
+      res.json({ items: [], rig: req.params.rig });
     }
   }
 });
 
-// Proxy all other GET /api/* → gt dashboard
-app.get('/api/*', async (req, res) => {
-  try {
-    const url = new URL(req.url, GT_DASHBOARD);
-    const upstream = await timedFetch(url.toString());
-    const contentType = upstream.headers.get('content-type') || '';
-    if (contentType.includes('json')) {
-      const data = await upstream.json();
-      res.json(data);
-    } else {
-      const text = await upstream.text();
-      res.type(contentType).send(text);
-    }
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+// SSE — emit periodic refresh events (no dashboard dependency)
+app.get('/api/events', (_req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  res.write('event: connected\ndata: ok\n\n');
+
+  // Send periodic heartbeat
+  const interval = setInterval(() => {
+    res.write('event: dashboard-update\ndata: refresh\n\n');
+  }, 10000);
+
+  _req.on('close', () => {
+    clearInterval(interval);
+  });
 });
 
 // Serve static built app
@@ -243,7 +160,4 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[gas-town-rts] Server running on http://localhost:${PORT}`);
-  fetchCsrfToken().catch(err => {
-    console.warn('[csrf] Initial token fetch failed (dashboard may not be running):', err.message);
-  });
 });

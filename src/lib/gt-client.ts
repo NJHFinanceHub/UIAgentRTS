@@ -152,7 +152,7 @@ export async function getStatus(): Promise<TownStatus> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ command: 'status --json' }),
-  }, 12000);
+  }, 25000);
   const data: CommandResponse = await res.json();
   if (data.success && data.output) {
     return extractJSON(data.output);
@@ -207,7 +207,7 @@ export async function runCommand(command: string, confirmed = false): Promise<Co
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ command, confirmed }),
-  }, 12000);
+  }, 20000);
   return res.json();
 }
 
