@@ -2,3 +2,5 @@ node_modules/
 dist/
 server/node_modules/
 *.log
+.claude/
+.runtime/
