@@ -132,6 +132,37 @@ app.get('/api/beads/:rig', async (req, res) => {
   }
 });
 
+// Convoy list — gt convoy list --json
+app.get('/api/convoys', async (_req, res) => {
+  try {
+    const output = await runGt(['convoy', 'list', '--json'], 8000);
+    try {
+      const data = JSON.parse(output);
+      // data is an array of convoy objects
+      res.json({ convoys: Array.isArray(data) ? data : [] });
+    } catch {
+      res.json({ convoys: [] });
+    }
+  } catch {
+    res.json({ convoys: [] });
+  }
+});
+
+// Convoy status — gt convoy status [id] --json
+app.get('/api/convoys/:id', async (req, res) => {
+  try {
+    const output = await runGt(['convoy', 'status', req.params.id, '--json'], 8000);
+    try {
+      const data = JSON.parse(output);
+      res.json(data);
+    } catch {
+      res.json({ error: 'Failed to parse convoy status' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // SSE — emit periodic refresh events (no dashboard dependency)
 app.get('/api/events', (_req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');

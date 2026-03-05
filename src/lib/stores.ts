@@ -1,5 +1,5 @@
 import { writable, derived } from 'svelte/store';
-import type { TownStatus, Rig, MailInbox, ReadyItem, MailMessage, RigBead } from './gt-client';
+import type { TownStatus, Rig, MailInbox, ReadyItem, MailMessage, RigBead, Convoy } from './gt-client';
 
 // Core state
 export const townStatus = writable<TownStatus | null>(null);
@@ -7,6 +7,7 @@ export const mailInbox = writable<MailInbox | null>(null);
 export const readyItems = writable<ReadyItem[]>([]);
 export const selectedRig = writable<Rig | null>(null);
 export const rigBeads = writable<RigBead[]>([]);
+export const convoys = writable<Convoy[]>([]);
 export const connected = writable(false);
 
 // Selected unit inside a rig interior (peon or hero)

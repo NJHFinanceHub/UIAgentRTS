@@ -234,6 +234,51 @@ export async function getRigBeads(rig: string): Promise<RigBead[]> {
   }
 }
 
+// Convoy types
+export interface Convoy {
+  id: string;
+  title: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+  total_issues?: number;
+  closed_issues?: number;
+  open_issues?: number;
+  tracked_issues?: ConvoyIssue[];
+  owner?: string;
+}
+
+export interface ConvoyIssue {
+  id: string;
+  title: string;
+  status: string;
+  assignee?: string;
+  priority?: number;
+}
+
+// Fetch active convoys
+export async function getConvoys(): Promise<Convoy[]> {
+  try {
+    const res = await timedFetch(`${API_BASE}/convoys`);
+    const data = await res.json();
+    return data.convoys ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// Fetch detailed convoy status
+export async function getConvoyStatus(id: string): Promise<Convoy | null> {
+  try {
+    const res = await timedFetch(`${API_BASE}/convoys/${encodeURIComponent(id)}`);
+    const data = await res.json();
+    if (data.error) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 // Send mail via JSON endpoint (not shell command)
 export async function sendMail(to: string, subject: string, body: string): Promise<{ success: boolean; error?: string }> {
   try {

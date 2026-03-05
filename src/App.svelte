@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { getStatus, getMailInbox, getReady, connectSSE } from './lib/gt-client';
-  import { townStatus, selectedRig, selectedUnit, mailInbox, readyItems, connected, addNotification } from './lib/stores';
+  import { getStatus, getMailInbox, getReady, getConvoys, connectSSE } from './lib/gt-client';
+  import { townStatus, selectedRig, selectedUnit, mailInbox, readyItems, convoys, connected, addNotification } from './lib/stores';
 
   import ResourceBar from './components/ResourceBar.svelte';
   import TerrainMap from './components/TerrainMap.svelte';
@@ -35,10 +35,11 @@
     refreshing = true;
     try {
       // Run all fetches in parallel — don't let one block the others
-      const [statusResult, mailResult, readyResult] = await Promise.allSettled([
+      const [statusResult, mailResult, readyResult, convoyResult] = await Promise.allSettled([
         getStatus(),
         getMailInbox(),
         getReady(),
+        getConvoys(),
       ]);
 
       if (statusResult.status === 'fulfilled') {
@@ -60,6 +61,10 @@
 
       if (readyResult.status === 'fulfilled') {
         readyItems.set(readyResult.value.items ?? []);
+      }
+
+      if (convoyResult.status === 'fulfilled') {
+        convoys.set(convoyResult.value);
       }
     } finally {
       refreshing = false;

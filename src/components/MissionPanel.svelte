@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { townStatus, selectedRig, selectedUnit } from '../lib/stores';
+  import { townStatus, selectedRig, selectedUnit, convoys } from '../lib/stores';
   import type { Rig } from '../lib/gt-client';
+  import ConvoyTracker from './ConvoyTracker.svelte';
 
   function selectRig(rig: Rig) {
     selectedUnit.set(null);
@@ -48,6 +49,8 @@
         </div>
       {/each}
     {/if}
+
+    <ConvoyTracker />
 
     {#if dockedRigs.length > 0}
       <div class="section-label">DOCKED</div>
